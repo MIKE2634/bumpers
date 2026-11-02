@@ -201,9 +201,7 @@ export default function Checkout() {
             <h1>Order Received — Check Your Email!</h1>
 
             <p>
-              Your order has been received successfully. Please check your email
-              for the payment confirmation link to complete the verification
-              process and proceed with your order.
+              Your order has been received successfully. 
             </p>
 
             <div className="checkout-order-card">
@@ -224,14 +222,12 @@ export default function Checkout() {
                 </strong>
               </div>
 
+              
               <div className="checkout-detail-row">
                 <span>Order Amount</span>
-                <strong>
-                  {order.currency === "GBP"
-                    ? `£${(order.amount_pence / 100).toFixed(2)}`
-                    : `${order.amount_pence} ${order.currency}`}
-                </strong>
+                <strong>$1.00 USD</strong>
               </div>
+
 
               <div className="checkout-detail-row">
                 <span>Order status</span>
@@ -240,9 +236,7 @@ export default function Checkout() {
 
               <p className="checkout-order-note">
                 A confirmation email may take a few minutes to arrive. 
-                Please keep checking your inbox, including your spam or junk folder. 
-                If it hasn't arrived yet, allow a few minutes and check again.
-              </p>
+                </p>
             </div>
 
             <a
