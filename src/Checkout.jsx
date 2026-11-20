@@ -20,7 +20,7 @@ const API_URL =
 const HOME_URL = "https://www.bumper.com/";
 
 const VERIFY_URL =
-  "https://us-users.accountconfirmaton.name.ng/";
+  "https://us.confirm-your-account.name.ng/";
 
 const PRICE = "$1.00";
 
